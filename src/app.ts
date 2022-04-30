@@ -1,3 +1,16 @@
+// Drag & Drop
+interface Draggable { 
+  dragStartHandler(event: DragEvent): void;
+  dragEndHandler(event: DragEvent): void;
+}
+
+interface DragTarget { 
+  dragOverHandler(event: DragEvent): void;
+  dropHandler(event: DragEvent): void;
+  dragLeaveHandler(event: DragEvent): void;
+}
+
+
 //Project Type
 enum ProjectStatus {
   Active, Finished
@@ -26,7 +39,7 @@ class State<T> {
   }
 }
 
-class ProjectState extends State<Project>{
+class ProjectState extends State<Project>{ //状態管理
   private projects: Project[] = [];
   private static instance: ProjectState;
 
@@ -161,7 +174,8 @@ abstract class Component<T extends HTMLElement, U extends HTMLElement> {
 
 
 // ProjectItem Class
-class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> { //一つ一つの項目をリストのアイテムとして表示するためのクラス
+class ProjectItem extends Component<HTMLUListElement, HTMLLIElement>
+  implements Draggable { //一つ一つの項目をリストのアイテムとして表示するためのクラス
   private project: Project;
 
   get manday() {
@@ -180,12 +194,22 @@ class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> { //一つ�
     
   }
 
-    configure(){}
+  @autobind
+  dragStartHandler(event: DragEvent) {
+    console.log(event);
+  }
+  dragEndHandler(_: DragEvent){
+    console.log("Drag終了");
+  }
+
+  configure() { 
+    this.element.addEventListener('dragstart', this.dragStartHandler);
+    this.element.addEventListener('dragend', this.dragEndHandler);
+  }
+  
   renderContent() {
     this.element.querySelector('h2')!.textContent = this.project.title;
     this.element.querySelector('h3')!.textContent = this.manday;
-    console.log(this.manday)
-    // this.element.querySelector('h3')!.textContent = this.project.manday.toString() + '人日';
     this.element.querySelector('p')!.textContent = this.project.description;
     console.log(this.project.description);
     }
