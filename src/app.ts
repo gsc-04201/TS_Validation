@@ -10,7 +10,6 @@ interface DragTarget {
   dragLeaveHandler(event: DragEvent): void;
 }
 
-
 //Project Type
 enum ProjectStatus {
   Active, Finished
@@ -64,6 +63,18 @@ class ProjectState extends State<Project>{ //状態管理
       ProjectStatus.Active
     )
     this.projects.push(newProject);
+    this.updateListeners();
+  }
+
+  moveProject(projectId: string, newStatus: ProjectStatus) {
+    const project = this.projects.find(prj => prj.id === projectId);
+    if (project && project.status !== newStatus) {
+      project.status = newStatus;
+      this.updateListeners();
+    }
+  }
+
+  private updateListeners() {
     for (const listenerFn of this.listeners) {
       listenerFn(this.projects.slice());
     }
@@ -87,12 +98,12 @@ function validate(validatableInput: Validatable) {
     isValid = isValid && validatableInput.value.toString().trim().length !== 0;
     
   }
-  if (validatableInput.minLength != null &&
+  if (
+    validatableInput.minLength != null &&
     typeof validatableInput.value === 'string'
   ) {
     isValid =
       isValid && validatableInput.value.length >= validatableInput.minLength;
-    
   }
   if (
     validatableInput.maxLength != null &&
@@ -172,7 +183,6 @@ abstract class Component<T extends HTMLElement, U extends HTMLElement> {
 //////////////////////////////////////
 
 
-
 // ProjectItem Class
 class ProjectItem extends Component<HTMLUListElement, HTMLLIElement>
   implements Draggable { //一つ一つの項目をリストのアイテムとして表示するためのクラス
@@ -196,8 +206,12 @@ class ProjectItem extends Component<HTMLUListElement, HTMLLIElement>
 
   @autobind
   dragStartHandler(event: DragEvent) {
-    console.log(event);
+    //drageventでデータを転送するためのプロパティ
+    event.dataTransfer!.setData('text/plain', this.project.id);
+    //ブラウザ上でカーソルがどのように表示されるかをコントロールするためのもの
+    event.dataTransfer!.effectAllowed = 'move';
   }
+
   dragEndHandler(_: DragEvent){
     console.log("Drag終了");
   }
@@ -216,7 +230,7 @@ class ProjectItem extends Component<HTMLUListElement, HTMLLIElement>
 }
 
 // Projectlist Class
-class ProjectList extends Component<HTMLDivElement, HTMLElement> {
+class ProjectList extends Component<HTMLDivElement, HTMLElement> implements DragTarget {
   assignedProjects: Project[];
 
   constructor(private type: 'active' | 'finished') {
@@ -227,7 +241,34 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
     this.renderContent();
   }
 
+  @autobind
+  dragOverHandler(event: DragEvent) {
+    if (event.dataTransfer && event.dataTransfer.types[0] === 'text/plain') {
+      event.preventDefault();
+      const listEl = this.element.querySelector('ul')!;
+      listEl.classList.add('droppable');
+    }
+  }
+
+  @autobind
+  dropHandler(event: DragEvent) {
+    const prjId = event.dataTransfer!.getData('text/plain');
+    projectState.moveProject(
+      prjId, this.type === 'active' ? ProjectStatus.Active : ProjectStatus.Finished
+    );
+  }
+
+  @autobind
+  dragLeaveHandler(_: DragEvent): void {
+    const listEl = this.element.querySelector('ul')!;
+    listEl.classList.remove('droppable');
+  }
+
   configure() { //activeかfinishedかを判定
+    this.element.addEventListener('dragover', this.dragOverHandler);
+    this.element.addEventListener('drop', this.dropHandler);
+    this.element.addEventListener('dragleave', this.dragLeaveHandler);
+
     projectState.addListener((projects: Project[]) => {
       const relevantProjects = projects.filter(prj => {
         if (this.type === 'active') {
@@ -236,13 +277,11 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
         return prj.status === ProjectStatus.Finished;
       });
 
-
       this.assignedProjects = relevantProjects;
       this.renderProjects();
 
     })
   }
-
 
   public renderContent() { //実行中か完了かの判定
     const listId = `${this.type}-projects-list`;
@@ -257,9 +296,6 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
     listEl.innerHTML = '';
     for (const prjItem of this.assignedProjects) {
       new ProjectItem(listEl.id, prjItem);
-      // const listItem = document.createElement('li');
-      // listItem.textContent = prjItem.title;
-      // listEl.appendChild(listItem);
     }
   }
 }
@@ -328,7 +364,6 @@ class ProjectInput extends Component<HTMLDivElement, HTMLFormElement> {
     this.mandayInputElement.value = '';
   }
 
-
   @autobind
   // レシーバ関数この中で入力項目にアクセスして検証する
   private submitHandler(event: Event) {
@@ -345,4 +380,3 @@ class ProjectInput extends Component<HTMLDivElement, HTMLFormElement> {
 const prjInput = new ProjectInput();
 const acrivePrjList = new ProjectList('active');
 const finishedPrjList = new ProjectList('finished');
-
