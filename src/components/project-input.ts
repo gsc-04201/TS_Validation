@@ -1,8 +1,8 @@
-import Cmp from "./base-component.js";
-import * as Validation from "../util/validation.js"
+import Cmp from "./base-component";
+import * as Validation from "../util/validation"
 //名前の衝突を避ける際にasを使用する
-import { autobind as Autobind } from "../decorators/autobind.js";
-import { projectState } from "../state/project-state.js";
+import { autobind as Autobind } from "../decorators/autobind";
+import { projectState } from "../state/project-state";
 
 // ProjectInput Class
 export class ProjectInput extends Cmp<HTMLDivElement, HTMLFormElement> {
